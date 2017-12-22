@@ -21,6 +21,7 @@ Class Welcome extends CI_Controller{
         $messageid  = $client->parseEvents()[0]['message']['id'];
         $profil = $client->profil($userId);
         $pesan_datang = strtolower($message['text']);
+        $pesan_datang_raw = $message['text'];
 
         if($message['type']=='text')
         {
@@ -34,7 +35,8 @@ Class Welcome extends CI_Controller{
                                     'messages' => array(
                                         array(
                                                 'type' => 'text',                   
-                                                'text' => "Halaman saat ini = " . $halaman_saat_ini
+                                                'text' => "Halaman saat ini = " . $halaman_saat_ini->halaman . "\n"
+                                                            . "Waktu = " . $halaman_saat_ini->waktu
                                             )
                                     )
                                 );
@@ -100,8 +102,23 @@ Class Welcome extends CI_Controller{
                                 );                    
             }
             else
+            if($pesan_datang_raw == 'HAPUS')
+            {
+                $this->m_welcome->hapus($userId);
+                                $balas = array(
+                                    'replyToken' => $replyToken,                                                        
+                                    'messages' => array(
+                                        array(
+                                                'type' => 'text',                   
+                                                'text' => 'Berhasil menghapus semua data !!!'
+                                            )
+                                    )
+                                );                    
+            }
+            else
             if($pesan_datang == 'status')
             {
+                if ($this->m_welcome->cek_admin($userId) == 1) {
                                 $i = 1;
                                 $teks = "";
                                 foreach ($this->m_welcome->list_user() as $item) {
@@ -119,7 +136,18 @@ Class Welcome extends CI_Controller{
                                                 'text' => $teks
                                             )
                                     )
-                                );                    
+                                );                   
+                } else {
+                    $balas = array(
+                                    'replyToken' => $replyToken,                                                        
+                                    'messages' => array(
+                                        array(
+                                                'type' => 'text',                   
+                                                'text' => "Hanya ADMIN yang dapat menggunakan perintah ini !!!"
+                                            )
+                                    )
+                                );   
+                } 
             }
             else
             if($pesan_datang == 'listadmin')
@@ -159,7 +187,7 @@ Class Welcome extends CI_Controller{
                                     'messages' => array(
                                         array(
                                                 'type' => 'text',                                   
-                                                'text' => 'Maaf, hanya teks yang dapat kami proses !!!'
+                                                'text' => "Maaf, hanya teks yang dapat kami proses !!!\nAde <3 Agung"
                                             )
                                     )
                                 );

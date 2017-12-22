@@ -4,6 +4,12 @@ class M_welcome extends CI_Model{
 		parent::__construct();		
 	}
 
+	function hapus($userid) {
+		$sql = "DELETE FROM fix
+				WHERE id_user_line = ?";
+		$this->db->query($sql, array($userid));
+	}
+
 	function list_admin() {
 		$sql = "SELECT *
 				FROM admin";
@@ -11,6 +17,16 @@ class M_welcome extends CI_Model{
 		$row = $query->result();
 
 		return $row;
+	}
+
+	function cek_admin($userID) {
+		$sql = "SELECT count(*) total
+				FROM admin
+				WHERE id_user_line = ?";
+		$query = $this->db->query($sql, array($userID));
+		$row = $query->row();
+
+		return $row->total;
 	}
 
 	function list_user() {
