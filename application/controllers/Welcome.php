@@ -1,6 +1,9 @@
 <?php
 Class Welcome extends CI_Controller{
     
+    var $channelAccessToken = 'UPE0Fid2AE/WGdpbKgZHQgX6KnZQ+c5NnxnAJgDdCn/C2wjKDypsu5+eFxQ5S80XvWT7OGEi5osZX7ASfyp9831Ft6Gmt8qeVBjn5Up/IYz3CqU2Xshh/jeDVbzMF/4f98tsVOFBlRin3/PnXHyZUQdB04t89/1O/w1cDnyilFU='; 
+    var $channelSecret = '3d289fd286e3a0a3c68da71138cf042b';
+
     function __construct() {
         parent::__construct();
         $this->load->model('m_welcome');
@@ -10,10 +13,23 @@ Class Welcome extends CI_Controller{
         var_dump($this->m_welcome->list_admin());
     }
 
+    function push(){
+        $client     = new LINEBotTiny($this->channelAccessToken, $this->channelSecret);
+        $push = array(
+                                    // 'to' => 'Ud31491d87b057fc48eaa9ae986f8bbc4', //tika
+                                    'to' => 'U0d4965553ebeaf022e205e9056895a46', //agungdh
+                                    'messages' => array(
+                                        array(
+                                                'type' => 'text',                                   
+                                                'text' => "test push"
+                                            )
+                                    )
+                                );
+        $client->pushMessage($push);
+    }
+
     function index(){
-        $channelAccessToken = 'UPE0Fid2AE/WGdpbKgZHQgX6KnZQ+c5NnxnAJgDdCn/C2wjKDypsu5+eFxQ5S80XvWT7OGEi5osZX7ASfyp9831Ft6Gmt8qeVBjn5Up/IYz3CqU2Xshh/jeDVbzMF/4f98tsVOFBlRin3/PnXHyZUQdB04t89/1O/w1cDnyilFU='; 
-        $channelSecret = '3d289fd286e3a0a3c68da71138cf042b';
-        $client     = new LINEBotTiny($channelAccessToken, $channelSecret);
+        $client     = new LINEBotTiny($this->channelAccessToken, $this->channelSecret);
         $userId     = $client->parseEvents()[0]['source']['userId'];
         $replyToken = $client->parseEvents()[0]['replyToken'];
         $timestamp  = $client->parseEvents()[0]['timestamp'];
@@ -102,6 +118,29 @@ Class Welcome extends CI_Controller{
                                 );                    
             }
             else
+            if($pesan_datang == 'listuser')
+            {
+                                $orang = null;
+                                foreach ($this->m_welcome->list_user() as $item) {
+                                    $orang .= "Nama : ";
+                                    $orang .= $client->profil($item->id_user_line)->displayName;
+                                    $orang .= "\n";
+                                    $orang .= "UserID : ";
+                                    $orang .= $userId;
+                                    $orang .= "\n";
+                                    $orang .= "\n";
+                                }
+                                $balas = array(
+                                    'replyToken' => $replyToken,                                                        
+                                    'messages' => array(
+                                        array(
+                                                'type' => 'text',                   
+                                                'text' => $orang
+                                            )
+                                    )
+                                );                    
+            }
+            else
             if($pesan_datang_raw == 'HAPUS')
             {
                 $this->m_welcome->hapus($userId);
@@ -170,15 +209,15 @@ Class Welcome extends CI_Controller{
                                 );                    
             }
             else{
-                $balas = array(
-                                    'replyToken' => $replyToken,                                                        
-                                    'messages' => array(
-                                        array(
-                                                'type' => 'text',                   
-                                                'text' => "Maaf, format penulisan salah !!!\nAde <3 Agung"
-                                            )
-                                    )
-                                );
+                // $balas = array(
+                //                     'replyToken' => $replyToken,                                                        
+                //                     'messages' => array(
+                //                         array(
+                //                                 'type' => 'text',                   
+                //                                 'text' => "Maaf, format penulisan salah !!!\n"
+                //                             )
+                //                     )
+                //                 );
             }
         }else
         {   
@@ -187,12 +226,12 @@ Class Welcome extends CI_Controller{
                                     'messages' => array(
                                         array(
                                                 'type' => 'text',                                   
-                                                'text' => "Maaf, hanya teks yang dapat kami proses !!!\nAde <3 Agung"
+                                                'text' => "Maaf, hanya teks yang dapat kami proses !!!\n"
                                             )
                                     )
                                 );
         }
-        $client->replyMessage($balas);
+        $client->replyMessage($balas); 
     }
     
 }
