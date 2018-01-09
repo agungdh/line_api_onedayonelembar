@@ -11,8 +11,8 @@ Class Welcome extends CI_Controller{
     }
 
     function index(){
-        $channelAccessToken = 'ZkcIv1qcHx4NHYs9FXR642YgRYRrHWQnoMOVNv0BKZlXQn8+RFWysAROXaEWL7VFJGyJ6AyVeeyS9mltbyvN7PhdX2gKYoKFakokzE9tD04Ckza/5HSh+AAg9jAyIBh+QHrUWaKgCjT/hQzv7PDHlQdB04t89/1O/w1cDnyilFU='; 
-        $channelSecret = '87ce39f466d048e3738917a769a27231';
+        $channelAccessToken = 'UPE0Fid2AE/WGdpbKgZHQgX6KnZQ+c5NnxnAJgDdCn/C2wjKDypsu5+eFxQ5S80XvWT7OGEi5osZX7ASfyp9831Ft6Gmt8qeVBjn5Up/IYz3CqU2Xshh/jeDVbzMF/4f98tsVOFBlRin3/PnXHyZUQdB04t89/1O/w1cDnyilFU='; 
+        $channelSecret = '3d289fd286e3a0a3c68da71138cf042b';
         $client     = new LINEBotTiny($channelAccessToken, $channelSecret);
         $userId     = $client->parseEvents()[0]['source']['userId'];
         $replyToken = $client->parseEvents()[0]['replyToken'];
