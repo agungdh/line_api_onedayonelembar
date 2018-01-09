@@ -16,16 +16,12 @@ Class Welcome extends CI_Controller{
     function push(){
         $client     = new LINEBotTiny($this->channelAccessToken, $this->channelSecret);
         foreach ($this->m_welcome->list_user() as $item) {
-                                    $profil = $client->profil($item->id_user_line);
-                                    $push = array(
-                                    'to' => $item->id_user_line,
-                                    'messages' => array(
-                                        array(
-                                                'type' => 'text',                                   
-                                                'text' => "test push ke " . $profil->displayName
-                                            )
-                                    )
-                                );        
+            $profil = $client->profil($item->id_user_line);
+            
+            $push['to'] = $item->id_user_line;
+            $push['messages'][0]['type'] = 'text';
+            $push['messages'][0]['text'] = "test push ke " . $profil->displayName;
+
             $client->pushMessage($push);
         }
     }
