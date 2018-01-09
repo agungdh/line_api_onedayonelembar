@@ -15,17 +15,19 @@ Class Welcome extends CI_Controller{
 
     function push(){
         $client     = new LINEBotTiny($this->channelAccessToken, $this->channelSecret);
-        $push = array(
-                                    // 'to' => 'Ud31491d87b057fc48eaa9ae986f8bbc4', //tika
-                                    'to' => 'U0d4965553ebeaf022e205e9056895a46', //agungdh
+        foreach ($this->m_welcome->list_user() as $item) {
+                                    $profil = $client->profil($item->id_user_line);
+                                    $push = array(
+                                    'to' => $item->id_user_line,
                                     'messages' => array(
                                         array(
                                                 'type' => 'text',                                   
-                                                'text' => "test push"
+                                                'text' => "test push ke " . $profil->displayName
                                             )
                                     )
-                                );
-        $client->pushMessage($push);
+                                );        
+            $client->pushMessage($push);
+        }
     }
 
     function index(){
