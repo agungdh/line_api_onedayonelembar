@@ -4,103 +4,134 @@ class M_welcome extends CI_Model{
 		parent::__construct();		
 	}
 
-	function hapus($userid) {
-		$sql = "DELETE FROM fix
-				WHERE id_user_line = ?";
-		$this->db->query($sql, array($userid));
-	}
-
-	function list_admin() {
+	function status_ngaji($id_user) {
 		$sql = "SELECT *
-				FROM admin";
-		$query = $this->db->query($sql, array());
-		$row = $query->result();
-
-		return $row;
-	}
-
-	function cek_admin($userID) {
-		$sql = "SELECT count(*) total
-				FROM admin
-				WHERE id_user_line = ?";
-		$query = $this->db->query($sql, array($userID));
+				FROM fix
+				WHERE id_user = ?
+				AND date(waktu) = date(now())
+				ORDER BY id DESC
+				LIMIT 1";
+		$query = $this->db->query($sql, array($id_user));
 		$row = $query->row();
 
-		return $row->total;
+		return $row;
 	}
 
 	function list_user() {
-		$sql = "SELECT id_user_line
-				FROM fix
-				GROUP BY id_user_line";
+		$sql = "SELECT id_line
+				FROM user";
 		$query = $this->db->query($sql, array());
 		$row = $query->result();
 
 		return $row;
 	}
 
-	function lihat_status($userid) {
-		$sql = "SELECT *
-				FROM fix
-				WHERE id_user_line = ?
-				ORDER BY id DESC
-				LIMIT 1";
-		$query = $this->db->query($sql, array($userid));
-		$row = $query->row();
+	function list_admin() {
+		$sql = "SELECT id_line
+				FROM user
+				WHERE admin = 1";
+		$query = $this->db->query($sql, array());
+		$row = $query->result();
 
 		return $row;
 	}
 
-	function lihat_halaman_saat_ini($userid) {
-		$sql = "SELECT *
-				FROM fix
-				WHERE id_user_line = ?
-				ORDER BY id DESC
-				LIMIT 1";
-		$query = $this->db->query($sql, array($userid));
-		$row = $query->row();
-
-		return $row;
+	function tambah_fix($id_user, $tanggal) {
+		$sql = "INSERT INTO fix (id_user, halaman, waktu) 
+				SELECT id_user, halaman, ? waktu
+				FROM sementara
+				WHERE id_user = ?;";
+		$this->db->query($sql, array($tanggal, $id_user));
 	}
 
-	function cek_jumlah_sementara($userid) {
+	function hapus_sementara($id_user) {
+		$sql = "DELETE FROM sementara
+				WHERE id_user = ?";
+		$this->db->query($sql, array($id_user));
+	}
+
+	function tambah_sementara($id_user, $halaman) {
+		$sql = "INSERT INTO sementara
+				SET id_user = ?,
+				halaman = ?";
+		$this->db->query($sql, array($id_user, $halaman));
+	}
+
+	function update_sementara($id_user, $halaman) {
+		$sql = "UPDATE sementara
+				SET halaman = ?
+				WHERE id_user = ?";
+		$this->db->query($sql, array($halaman, $id_user));
+	}
+
+	function cek_jumlah_sementara($id_user) {
 		$sql = "SELECT count(*) total
 				FROM sementara
-				WHERE id_user_line = ?";
-		$query = $this->db->query($sql, array($userid));
+				WHERE id_user = ?";
+		$query = $this->db->query($sql, array($id_user));
 		$row = $query->row();
 
 		return $row->total;
 	}
 
-	function tambah_fix($userid) {
-		$sql = "INSERT INTO fix (id_user_line, halaman, waktu) 
-				SELECT id_user_line, halaman, waktu
+	function lihat_halaman_saat_ini($id_user) {
+		$sql = "SELECT *
+				FROM fix
+				WHERE id_user = ?
+				ORDER BY id DESC
+				LIMIT 1";
+		$query = $this->db->query($sql, array($id_user));
+		$row = $query->row();
+
+		return $row;
+	}
+
+	function lihat_halaman_sementara($id_user) {
+		$sql = "SELECT *
 				FROM sementara
-				WHERE id_user_line = ?";
-		$this->db->query($sql, array($userid));
+				WHERE id_user = ?
+				ORDER BY id DESC
+				LIMIT 1";
+		$query = $this->db->query($sql, array($id_user));
+		$row = $query->row();
+
+		return $row;
 	}
 
-	function hapus_sementara($userid) {
+	function keluar($id_user) {
+		$sql = "DELETE FROM user
+				WHERE id = ?";
+		$this->db->query($sql, array($id_user));
+		return 1;
+	}
+
+	function delete_fix($id_user) {
+		$sql = "DELETE FROM fix
+				WHERE id_user = ?";
+		$this->db->query($sql, array($id_user));
+		return 1;
+	}
+
+	function delete_sementara($id_user) {
 		$sql = "DELETE FROM sementara
-				WHERE id_user_line = ?";
-		$this->db->query($sql, array($userid));
+				WHERE id_user = ?";
+		$this->db->query($sql, array($id_user));
+		return 1;
 	}
 
-	function tambah_sementara($userid, $halaman) {
-		$sql = "INSERT INTO sementara
-				SET id_user_line = ?,
-				halaman = ?";
-		$this->db->query($sql, array($userid, $halaman));
+	function daftar($userid, $waktu) {
+		$sql = "INSERT INTO user
+				SET id_line = ?,
+				waktu_daftar = ?";
+		$this->db->query($sql, array($userid, $waktu));
+		return $this->db->insert_id();
 	}
 
-	function update_sementara($userid, $halaman) {
-		$sql = "UPDATE sementara
-				SET halaman = ?,
-				waktu = now()
-				WHERE id_user_line = ?";
-		$this->db->query($sql, array($halaman, $userid));
+	function cek_daftar($userid) {
+		$sql = "SELECT id
+				FROM user
+				WHERE id_line = ?";
+		return $this->db->query($sql, array($userid))->row()->id;
 	}
-
 }
 ?>
