@@ -34,12 +34,22 @@ Class Welcome extends CI_Controller{
         $client     = new LINEBotTiny($this->channelAccessToken, $this->channelSecret);
         foreach ($this->m_welcome->list_user() as $item) {
             $profil = $client->profil($item->id_line);
-            
             $push['to'] = $item->id_line;
             $push['messages'][0]['type'] = 'text';
-            $push['messages'][0]['text'] = "auto push ke " . $profil->displayName;
+            $push['messages'][0]['text'] = "";
+            
+            $id_user = $this->m_welcome->cek_daftar($item->id_line);
+            $halaman_saat_ini = $this->m_welcome->lihat_halaman_saat_ini($id_user);
+            $status_ngaji = $this->m_welcome->status_ngaji($id_user);
+            $target = $this->m_welcome->lihat_halaman_kemaren($id_user)->halaman + 2;
+            if ($status_ngaji == null || $halaman_saat_ini->halaman < $target) {
+                $push['messages'][0]['text'] .= "Hari Ini Anda Belum Ngaji !!!\n";
+                $push['messages'][0]['text'] .= "Target Ngaji Hari Ini Minimal Sampai Halaman " . $target . "\n";
+                $push['messages'][0]['text'] .= "Halaman saat ini = " . $halaman_saat_ini->halaman . "\n";
+                $push['messages'][0]['text'] .= "Waktu = " . $halaman_saat_ini->waktu;
+                $client->pushMessage($push);
+            }
 
-            $client->pushMessage($push);
         }
     }
 
@@ -101,9 +111,10 @@ Class Welcome extends CI_Controller{
                         } else {
                             $reply['messages'][0]['text'] = "";
                             $status_ngaji = $this->m_welcome->status_ngaji($id_user);
-                            if ($status_ngaji == null) {
+                            $target = $this->m_welcome->lihat_halaman_kemaren($id_user)->halaman + 2;
+                            if ($status_ngaji == null || $halaman_saat_ini->halaman < $target) {
                                 $reply['messages'][0]['text'] .= "Hari Ini Anda Belum Ngaji !!!\n";
-                                $reply['messages'][0]['text'] .= "Target Ngaji Hari Ini Minimal Sampai Halaman \n";
+                                $reply['messages'][0]['text'] .= "Target Ngaji Hari Ini Minimal Sampai Halaman " . $target . "\n";
                             }
                             $reply['messages'][0]['text'] .= "Halaman saat ini = " . $halaman_saat_ini->halaman . "\n";
                             $reply['messages'][0]['text'] .= "Waktu = " . $halaman_saat_ini->waktu;

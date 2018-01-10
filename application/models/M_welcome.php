@@ -4,6 +4,19 @@ class M_welcome extends CI_Model{
 		parent::__construct();		
 	}
 
+		function lihat_halaman_kemaren($id_user) {
+		$sql = "SELECT *
+				FROM fix
+				WHERE id_user = ?
+				AND date(waktu) = date(now()) - INTERVAL 1 DAY
+				ORDER BY id DESC
+				LIMIT 1";
+		$query = $this->db->query($sql, array($id_user));
+		$row = $query->row();
+
+		return $row;
+	}
+
 	function status_ngaji($id_user) {
 		$sql = "SELECT *
 				FROM fix
