@@ -1,19 +1,60 @@
 <?php
 Class Welcome extends CI_Controller{
     
+    var $channelAccessToken; 
+    var $channelSecret;
+
     function __construct() {
         parent::__construct();
         $this->load->model('m_welcome');
+
+        $this->channelAccessToken = 'UPE0Fid2AE/WGdpbKgZHQgX6KnZQ+c5NnxnAJgDdCn/C2wjKDypsu5+eFxQ5S80XvWT7OGEi5osZX7ASfyp9831Ft6Gmt8qeVBjn5Up/IYz3CqU2Xshh/jeDVbzMF/4f98tsVOFBlRin3/PnXHyZUQdB04t89/1O/w1cDnyilFU='; 
+        $this->channelSecret = '3d289fd286e3a0a3c68da71138cf042b';
+        date_default_timezone_set("Asia/Jakarta");
     }
     
     function test() {
-        var_dump($this->m_welcome->list_admin());
+        echo date('Y-m-d H:i:s');
     }
 
-    function index(){
-        $channelAccessToken = 'ZkcIv1qcHx4NHYs9FXR642YgRYRrHWQnoMOVNv0BKZlXQn8+RFWysAROXaEWL7VFJGyJ6AyVeeyS9mltbyvN7PhdX2gKYoKFakokzE9tD04Ckza/5HSh+AAg9jAyIBh+QHrUWaKgCjT/hQzv7PDHlQdB04t89/1O/w1cDnyilFU='; 
-        $channelSecret = '87ce39f466d048e3738917a769a27231';
-        $client     = new LINEBotTiny($channelAccessToken, $channelSecret);
+    function push() {
+        $client     = new LINEBotTiny($this->channelAccessToken, $this->channelSecret);
+        foreach ($this->m_welcome->list_user() as $item) {
+            $profil = $client->profil($item->id_line);
+            
+            $push['to'] = $item->id_line;
+            $push['messages'][0]['type'] = 'text';
+            $push['messages'][0]['text'] = "test push ke " . $profil->displayName;
+
+            $client->pushMessage($push);
+        }
+    }
+
+    function push_cron() {
+        $client     = new LINEBotTiny($this->channelAccessToken, $this->channelSecret);
+        foreach ($this->m_welcome->list_user() as $item) {
+            $profil = $client->profil($item->id_line);
+            $push['to'] = $item->id_line;
+            $push['messages'][0]['type'] = 'text';
+            $push['messages'][0]['text'] = "";
+            
+            $id_user = $this->m_welcome->cek_daftar($item->id_line);
+            $halaman_saat_ini = $this->m_welcome->lihat_halaman_saat_ini($id_user);
+            $status_ngaji = $this->m_welcome->status_ngaji($id_user);
+            $target = $this->m_welcome->lihat_halaman_kemaren($id_user)->halaman + 2;
+            if ($status_ngaji == null || $halaman_saat_ini->halaman < $target) {
+                $push['messages'][0]['text'] .= "Hari Ini Anda Belum Ngaji !!!\n";
+                $push['messages'][0]['text'] .= "Target Ngaji Hari Ini Minimal Sampai Halaman " . $target . "\n";
+                $push['messages'][0]['text'] .= "Halaman saat ini = " . $halaman_saat_ini->halaman . "\n";
+                $push['messages'][0]['text'] .= "Waktu = " . $halaman_saat_ini->waktu;
+                $client->pushMessage($push);
+            }
+
+        }
+    }
+
+    function index() {
+        $client     = new LINEBotTiny($this->channelAccessToken, $this->channelSecret);
         $userId     = $client->parseEvents()[0]['source']['userId'];
         $replyToken = $client->parseEvents()[0]['replyToken'];
         $timestamp  = $client->parseEvents()[0]['timestamp'];
@@ -22,177 +63,111 @@ Class Welcome extends CI_Controller{
         $profil = $client->profil($userId);
         $pesan_datang = strtolower($message['text']);
         $pesan_datang_raw = $message['text'];
+        $id_user = $this->m_welcome->cek_daftar($userId);
+        $halaman_saat_ini = $this->m_welcome->lihat_halaman_saat_ini($id_user);
+        $reply['replyToken'] = $replyToken;
+        $reply['messages'][0]['type'] = 'text';
 
-        if($message['type']=='text')
-        {
-            if(strpos($pesan_datang, 'hal') !== false)
-            {
-                $pesan_hal = explode(' ', $pesan_datang);
-                if (empty($pesan_hal[1])) {
-                    $halaman_saat_ini = $this->m_welcome->lihat_halaman_saat_ini($userId);
-                    $balas = array(
-                                    'replyToken' => $replyToken,                                                        
-                                    'messages' => array(
-                                        array(
-                                                'type' => 'text',                   
-                                                'text' => "Halaman saat ini = " . $halaman_saat_ini->halaman . "\n"
-                                                            . "Waktu = " . $halaman_saat_ini->waktu
-                                            )
-                                    )
-                                );
+        if($message['type']=='text') {
+            if ($pesan_datang == 'daftar') { //fungsi daftar user
+                $reply['messages'][1]['type'] = 'text';
+                $cek_db = $this->m_welcome->cek_daftar($userId);
+
+                if ($cek_db != null) {
+                    $reply['messages'][0]['text'] = "Anda Sudah Terdaftar !!!";
+                    $reply['messages'][1]['text'] .= "ID User Database = " . $cek_db;
+                    $reply['messages'][1]['text'] .= "\n";
+                    $reply['messages'][1]['text'] .= "ID User Line = " . $userId;
                 } else {
-                    if ($this->m_welcome->cek_jumlah_sementara($userId) == 0) {
-                        $this->m_welcome->tambah_sementara($userId, $pesan_hal[1]);
-                    } else {
-                        $this->m_welcome->update_sementara($userId, $pesan_hal[1]);
+                    $daftar = $this->m_welcome->daftar($userId, date('Y-m-d H:i:s'));
+                    $reply['messages'][0]['text'] = "Berhasil Daftar";
+                    $reply['messages'][1]['text'] .= "ID User Database = " . $daftar;
+                    $reply['messages'][1]['text'] .= "\n";
+                    $reply['messages'][1]['text'] .= "ID User Line = " . $userId;
+                }
+            } elseif ($pesan_datang == 'keluar') { //fungsi keluar (hapus user)
+                $cek_db = $this->m_welcome->cek_daftar($userId);
+                
+                if ($cek_db != null) {
+                    if ($this->m_welcome->delete_sementara($id_user)) {
+                        if ($this->m_welcome->delete_fix($id_user)) {
+                            if ($this->m_welcome->keluar($id_user)) {
+                                $reply['messages'][0]['text'] = "Berhasil Keluar";
+                            }
+                        }                    
                     }
-                                $balas = array(
-                                    'replyToken' => $replyToken,                                                        
-                                    'messages' => array(
-                                        array(
-                                                'type' => 'text',                   
-                                                'text' => 'Halaman ' . $pesan_hal[1] . ' ?'
-                                            )
-                                    )
-                                );                    
+                } else {
+                    $reply['messages'][0]['text'] = "Anda Belum Terdaftar !!!";
+                }
+            } elseif (strpos($pesan_datang, 'hal') !== false) {
+                $pesan_hal = explode(' ', $pesan_datang);
+
+                if ($id_user == null) {
+                    $reply['messages'][0]['text'] = "Anda Belum Terdaftar !!!";
+                } else {
+                    if (empty($pesan_hal[1])) {
+                        if ($halaman_saat_ini == null) {
+                            $reply['messages'][0]['text'] = "Anda Belum Menginput Halaman Terakhir !!!";
+                        } else {
+                            $reply['messages'][0]['text'] = "";
+                            $status_ngaji = $this->m_welcome->status_ngaji($id_user);
+                            $target = $this->m_welcome->lihat_halaman_kemaren($id_user)->halaman + 2;
+                            if ($status_ngaji == null || $halaman_saat_ini->halaman < $target) {
+                                $reply['messages'][0]['text'] .= "Hari Ini Anda Belum Ngaji !!!\n";
+                                $reply['messages'][0]['text'] .= "Target Ngaji Hari Ini Minimal Sampai Halaman " . $target . "\n";
+                            }
+                            $reply['messages'][0]['text'] .= "Halaman saat ini = " . $halaman_saat_ini->halaman . "\n";
+                            $reply['messages'][0]['text'] .= "Waktu = " . $halaman_saat_ini->waktu;
+                        }
+                    } else {
+                        if ($this->m_welcome->cek_jumlah_sementara($id_user) == 0) {
+                            $this->m_welcome->tambah_sementara($id_user, $pesan_hal[1]);
+                        } else {
+                            $this->m_welcome->update_sementara($id_user, $pesan_hal[1]);
+                        }
+                        $halaman_sementara = $this->m_welcome->lihat_halaman_sementara($id_user);
+                        $reply['messages'][0]['text'] = 'Halaman ' . $halaman_sementara->halaman . ' ?';
+                    }
+                }
+            } elseif ($pesan_datang == 'ya') {
+               if ($id_user == null) {
+                    $reply['messages'][0]['text'] = "Anda Belum Terdaftar !!!";
+                } else {
+                    if ($this->m_welcome->cek_jumlah_sementara($id_user) == 0) {
+                        $reply['messages'][0]['text'] = 'Halaman belum diinput' . "\n";
+                        $reply['messages'][0]['text'] .= 'Input halaman dengan menggunakan perintah "hal {halaman}"';
+                        $reply['messages'][0]['text'] .= "\n" . 'Contoh : hal 3';
+                    } else {
+                        $this->m_welcome->tambah_fix($id_user, date('Y-m-d H:i:s'));
+                        $this->m_welcome->hapus_sementara($id_user);
+                        $halaman_saat_ini = $this->m_welcome->lihat_halaman_saat_ini($id_user)->halaman;
+                        $reply['messages'][0]['text'] = 'Berhasil' . "\n" . "Halaman saat ini = " . $halaman_saat_ini;                    
+                    }  
+                } 
+            } elseif ($pesan_datang == 'cekuser') {
+                $reply['messages'][0]['text'] = 'UserID = ' . $userId . "\n" . 'DisplayName = ' . $profil->displayName;
+            } elseif ($pesan_datang == 'listuser') {
+                $i = 0;
+                $reply['messages'][0]['text'] = "Data User Yang Tergabung\n";   
+                foreach ($this->m_welcome->list_user() as $item) {
+                    $i++;
+                    $profil = $client->profil($item->id_line);
+                    $reply['messages'][0]['text'] .= $i . ") " . $profil->displayName . "\n";   
+                }
+            } elseif ($pesan_datang == 'listadmin') {
+                $i = 0;
+                $reply['messages'][0]['text'] = "Data Admin\n";   
+                foreach ($this->m_welcome->list_admin() as $item) {
+                    $i++;
+                    $profil = $client->profil($item->id_line);
+                    $reply['messages'][0]['text'] .= $i . ") " . $profil->displayName . "\n";   
                 }
             }
-            else
-            if($pesan_datang == 'ya')
-            {
-                if ($this->m_welcome->cek_jumlah_sementara($userId) == 0) {
-                        $balas = array(
-                                    'replyToken' => $replyToken,                                                        
-                                    'messages' => array(
-                                        array(
-                                                'type' => 'text',                   
-                                                'text' => 'Halaman belum diinput' . "\n" . 
-                                                            'Input halaman dengan menggunakan perintah "hal {halaman}"' . "\n" . 'Contoh : hal 3'
-                                            )
-                                    )
-                                ); 
-                    } else {
-                        $this->m_welcome->tambah_fix($userId);
-                        $this->m_welcome->hapus_sementara($userId);
-                        $halaman_saat_ini = $this->m_welcome->lihat_halaman_saat_ini($userId)->halaman;
-                                $balas = array(
-                                    'replyToken' => $replyToken,                                                        
-                                    'messages' => array(
-                                        array(
-                                                'type' => 'text',                   
-                                                'text' => 'Berhasil' . "\n" .
-                                                "Halaman saat ini = " . $halaman_saat_ini
-                                            )
-                                    )
-                                );                    
-                    }
-            }
-            else
-            if($pesan_datang == 'cekuser')
-            {
-                                $balas = array(
-                                    'replyToken' => $replyToken,                                                        
-                                    'messages' => array(
-                                        array(
-                                                'type' => 'text',                   
-                                                'text' => 'UserID = ' . $userId . "\n" .
-                                                            'DisplayName = ' . $profil->displayName
-                                            )
-                                    )
-                                );                    
-            }
-            else
-            if($pesan_datang_raw == 'HAPUS')
-            {
-                $this->m_welcome->hapus($userId);
-                                $balas = array(
-                                    'replyToken' => $replyToken,                                                        
-                                    'messages' => array(
-                                        array(
-                                                'type' => 'text',                   
-                                                'text' => 'Berhasil menghapus semua data !!!'
-                                            )
-                                    )
-                                );                    
-            }
-            else
-            if($pesan_datang == 'status')
-            {
-                if ($this->m_welcome->cek_admin($userId) == 1) {
-                                $i = 1;
-                                $teks = "";
-                                foreach ($this->m_welcome->list_user() as $item) {
-                                    $nama = $client->profil($item->id_user_line)->displayName;
-                                    $halaman = $this->m_welcome->lihat_halaman_saat_ini($item->id_user_line)->halaman;
-                                    $waktu = $this->m_welcome->lihat_halaman_saat_ini($item->id_user_line)->waktu;
-                                    $teks .= $i . ".) " . $nama . " | " . $halaman . " | " . $waktu ."\n";
-                                    $i++;
-                                }
-                                $balas = array(
-                                    'replyToken' => $replyToken,                                                        
-                                    'messages' => array(
-                                        array(
-                                                'type' => 'text',                   
-                                                'text' => $teks
-                                            )
-                                    )
-                                );                   
-                } else {
-                    $balas = array(
-                                    'replyToken' => $replyToken,                                                        
-                                    'messages' => array(
-                                        array(
-                                                'type' => 'text',                   
-                                                'text' => "Hanya ADMIN yang dapat menggunakan perintah ini !!!"
-                                            )
-                                    )
-                                );   
-                } 
-            }
-            else
-            if($pesan_datang == 'listadmin')
-            {
-                                $i = 1;
-                                $teks = "";
-                                foreach ($this->m_welcome->list_admin() as $item) {
-                                    $nama = $client->profil($item->id_user_line)->displayName;
-                                    $teks .= $i . ".) " . $nama . "\n";
-                                    $i++;
-                                }
-                                $balas = array(
-                                    'replyToken' => $replyToken,                                                        
-                                    'messages' => array(
-                                        array(
-                                                'type' => 'text',                   
-                                                'text' => $teks
-                                            )
-                                    )
-                                );                    
-            }
-            else{
-                $balas = array(
-                                    'replyToken' => $replyToken,                                                        
-                                    'messages' => array(
-                                        array(
-                                                'type' => 'text',                   
-                                                'text' => "Maaf, format penulisan salah !!!\nAde <3 Agung"
-                                            )
-                                    )
-                                );
-            }
-        }else
-        {   
-            $balas = array(
-                                    'replyToken' => $replyToken,                                                        
-                                    'messages' => array(
-                                        array(
-                                                'type' => 'text',                                   
-                                                'text' => "Maaf, hanya teks yang dapat kami proses !!!\nAde <3 Agung"
-                                            )
-                                    )
-                                );
-        }
-        $client->replyMessage($balas);
+        } else{
+            $reply['messages'][0]['text'] = "Maaf, hanya teks yang dapat kami proses !!!";
+        }   
+
+        $client->replyMessage($reply);    
     }
     
 }
